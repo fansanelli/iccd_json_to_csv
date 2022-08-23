@@ -5,7 +5,6 @@ import json
 separator = '\t'
 indirizzi = {}
 geometrie = {}
-siti = {}
 
 def convert(path):
     with open(path) as json_file:
@@ -13,30 +12,29 @@ def convert(path):
         for root in data['@graph']:
             if root['@type'] == 'clvapit:Address':
                 tmpstr = ''
-                if 'clvapit:fullAddress' in root:
-                    tmpstr = root['clvapit:fullAddress']
+                if 'rdfs:label' in root:
+                    if isinstance(root['rdfs:label'], str):
+                        tmpstr = root['rdfs:label']
+                    else:
+                        tmpstr = root['rdfs:label'][0]                    
                 indirizzi[root['@id']] = tmpstr
+        for root in data['@graph']:
             if root['@type'] == 'clvapit:Geometry':
                 tmpstr = ''
-                if 'clvapit:lat' in root:
-                    tmpstr = root['clvapit:lat'] + ',' + root['clvapit:long']
-                geometrie[root['@id']] = tmpstr
-            if root['@type'] == 'cis:Site':
+                if 'clvapit:serialization' in root:
+                    tmpstr = root['clvapit:serialization']['@value']
+                if 'clvapit:isGeometryFor' in root:
+                    geometrie[root['clvapit:isGeometryFor']['@id']] = tmpstr
+        for root in data['@graph']:
+            if root['@type'] == 'cis:Site' and isinstance(root['l0:name'], str):
                 tmpstr = ''
                 if 'cis:siteAddress' in root:
                     tmpstr = indirizzi[root['cis:siteAddress']['@id']]
-                tmpstr += separator
-                if 'clvapit:hasGeometry' in root:
-                    tmpstr += geometrie[root['clvapit:hasGeometry']['@id']]
-                siti[root['@id']] = tmpstr
+                tmpstr += separator 
+                if root['@id'] in geometrie:      
+                    tmpstr += geometrie[root['@id']]
+                print(root['@id'] + separator + root['l0:name'] + separator + tmpstr)
 
-        for root in data['@graph']:
-            if root['@type'] == 'cis:CulturalInstituteOrSite':
-                tmpstr = ''
-                if 'cis:hasSite' in root and root['cis:hasSite']['@id'] in siti:
-                    tmpstr = siti[root['cis:hasSite']['@id']]
-                if 'l0:identifier' in root:
-                    print(root['l0:identifier'] + separator + root['cis:institutionalCISName']['@value'] + separator + tmpstr)
 
 def main():
     convert('dataset-contenitoriFisici.json')
